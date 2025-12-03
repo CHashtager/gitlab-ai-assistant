@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { GitLabAIConfig, LLMMessage, LLMResponse, LLMProvider } from '../types';
+import { GitLabAIConfig, LLMMessage, LLMResponse } from '../types';
 
 export class LLMService {
   private config: GitLabAIConfig;
