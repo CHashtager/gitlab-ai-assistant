@@ -1,0 +1,232 @@
+{
+  "name": "gitlab-ai-assistant",
+  "displayName": "GitLab AI Assistant",
+  "description": "AI-powered GitLab integration for automated branch creation, commits, MR management, and intelligent code review",
+  "version": "0.0.1",
+  "publisher": "DeviantDev",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CHashtager/gitlab-ai-assistant"
+  },
+  "keywords": [
+    "gitlab",
+    "ai",
+    "code review",
+    "merge request",
+    "git"
+  ],
+  "license": "MIT",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitlabAI.createBranch",
+        "title": "GitLab AI: Create New Branch"
+      },
+      {
+        "command": "gitlabAI.commitChanges",
+        "title": "GitLab AI: Commit Changes with AI Message"
+      },
+      {
+        "command": "gitlabAI.pushAndCreateMR",
+        "title": "GitLab AI: Push & Create Merge Request"
+      },
+      {
+        "command": "gitlabAI.reviewCode",
+        "title": "GitLab AI: Review Current Changes"
+      },
+      {
+        "command": "gitlabAI.reviewMR",
+        "title": "GitLab AI: Review Merge Request"
+      },
+      {
+        "command": "gitlabAI.fullWorkflow",
+        "title": "GitLab AI: Full Workflow (Branch → Commit → Push → MR → Review)"
+      },
+      {
+        "command": "gitlabAI.configure",
+        "title": "GitLab AI: Configure Settings"
+      }
+    ],
+    "configuration": {
+      "title": "GitLab AI Assistant",
+      "properties": {
+        "gitlabAI.gitlabUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Self-hosted GitLab URL (e.g., https://gitlab.yourcompany.com)"
+        },
+        "gitlabAI.gitlabToken": {
+          "type": "string",
+          "default": "",
+          "description": "GitLab Personal Access Token (with api scope)"
+        },
+        "gitlabAI.llmProvider": {
+          "type": "string",
+          "enum": [
+            "openai",
+            "anthropic",
+            "ollama",
+            "custom"
+          ],
+          "default": "openai",
+          "description": "LLM Provider for AI features"
+        },
+        "gitlabAI.llmApiUrl": {
+          "type": "string",
+          "default": "",
+          "description": "LLM API URL (for self-hosted or custom endpoints)"
+        },
+        "gitlabAI.llmApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "LLM API Key"
+        },
+        "gitlabAI.llmModel": {
+          "type": "string",
+          "default": "gpt-4",
+          "description": "LLM Model to use (e.g., gpt-4, claude-3-opus, llama2)"
+        },
+        "gitlabAI.branchNamingConvention": {
+          "type": "string",
+          "default": "{type}/{ticket}-{description}",
+          "description": "Branch naming convention template. Available placeholders: {type}, {ticket}, {description}, {username}, {date}"
+        },
+        "gitlabAI.branchTypes": {
+          "type": "array",
+          "default": [
+            "feature",
+            "bugfix",
+            "hotfix",
+            "release",
+            "chore",
+            "docs",
+            "refactor"
+          ],
+          "description": "Allowed branch types"
+        },
+        "gitlabAI.commitMessageConvention": {
+          "type": "string",
+          "enum": [
+            "conventional",
+            "angular",
+            "gitmoji",
+            "custom"
+          ],
+          "default": "conventional",
+          "description": "Commit message convention style"
+        },
+        "gitlabAI.customCommitTemplate": {
+          "type": "string",
+          "default": "{type}({scope}): {subject}",
+          "description": "Custom commit message template (when convention is 'custom')"
+        },
+        "gitlabAI.reviewMode": {
+          "type": "string",
+          "enum": [
+            "syntax",
+            "logic",
+            "business",
+            "comprehensive"
+          ],
+          "default": "comprehensive",
+          "description": "Code review mode: syntax (style/syntax only), logic (logical errors), business (with context), comprehensive (all)"
+        },
+        "gitlabAI.businessContextFile": {
+          "type": "string",
+          "default": ".gitlab-ai-context.md",
+          "description": "Path to business context file for enhanced code reviews"
+        },
+        "gitlabAI.autoAssignReviewers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically assign reviewers to MRs based on CODEOWNERS"
+        },
+        "gitlabAI.defaultTargetBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Default target branch for merge requests"
+        },
+        "gitlabAI.mrTemplate": {
+          "type": "string",
+          "default": "",
+          "description": "Path to MR description template file"
+        },
+        "gitlabAI.enableDraftMR": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create MRs as draft by default"
+        }
+      }
+    },
+    "menus": {
+      "scm/title": [
+        {
+          "command": "gitlabAI.commitChanges",
+          "group": "navigation"
+        },
+        {
+          "command": "gitlabAI.pushAndCreateMR",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gitlabAI.reviewCode",
+          "group": "gitlabAI"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "gitlabAI.commitChanges",
+        "key": "ctrl+shift+g c",
+        "mac": "cmd+shift+g c"
+      },
+      {
+        "command": "gitlabAI.pushAndCreateMR",
+        "key": "ctrl+shift+g m",
+        "mac": "cmd+shift+g m"
+      },
+      {
+        "command": "gitlabAI.fullWorkflow",
+        "key": "ctrl+shift+g f",
+        "mac": "cmd+shift+g f"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run esbuild-base -- --production",
+    "esbuild-base": "node esbuild.js",
+    "compile": "npm run esbuild-base",
+    "watch": "npm run esbuild-base -- --watch",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.27.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "simple-git": "^3.21.0"
+  }
+}
