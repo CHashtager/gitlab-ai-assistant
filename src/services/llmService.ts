@@ -44,7 +44,7 @@ export class LLMService {
     switch (this.config.llmProvider) {
       case 'openai':
       case 'custom':
-        headers['Authorization'] = `Bearer ${this.config.llmApiKey}`;
+        headers['Authorization'] = `${this.config.llmApiKey}`;
         break;
       case 'anthropic':
         headers['x-api-key'] = this.config.llmApiKey;
