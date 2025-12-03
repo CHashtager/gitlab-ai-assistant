@@ -8,3 +8,8 @@
 - Automated MR creation
 - Code review with multiple modes
 - Support for multiple LLM providers
+
+
+## 0.0.2
+
+- Remove `Bearer` hardcoded value in auth header

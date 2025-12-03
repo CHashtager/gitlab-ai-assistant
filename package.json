@@ -2,7 +2,7 @@
   "name": "gitlab-ai-assistant",
   "displayName": "GitLab AI Assistant",
   "description": "AI-powered GitLab integration for automated branch creation, commits, MR management, and intelligent code review",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "DeviantDev",
   "engines": {
     "vscode": "^1.85.0"
