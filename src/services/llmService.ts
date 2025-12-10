@@ -524,4 +524,122 @@ ${businessContext ? `\nBusiness Context:\n${businessContext}` : ''}`
 
     return `${basePrompt}\n\n${modeInstructions[mode] || modeInstructions.comprehensive}`;
   }
+
+  /**
+   * AI-powered target branch selection for merge requests
+   */
+  async selectTargetBranch(
+    currentBranch: string,
+    availableBranches: string[],
+    defaultBranch: string,
+    options?: {
+      recentMRTargets?: string[];
+      commitMessages?: string[];
+      ticketNumber?: string;
+    }
+  ): Promise<{ targetBranch: string; confidence: 'high' | 'medium' | 'low'; reasoning: string }> {
+    const systemPrompt = `You are a git workflow expert. Select the most appropriate target branch for a merge request.
+
+## Selection Rules (in priority order):
+
+1. **Branch naming convention analysis:**
+   - \`feature/*\`, \`feat/*\` → target \`develop\` or \`dev\` if exists, else default branch
+   - \`bugfix/*\`, \`fix/*\` → target \`develop\` for non-critical, \`main\`/\`master\` for hotfixes
+   - \`hotfix/*\` → target \`main\` or \`master\` (production branch)
+   - \`release/*\` → target \`main\` or \`master\`
+   - \`chore/*\`, \`docs/*\` → target \`develop\` if exists, else default branch
+
+2. **GitFlow detection:**
+   - If both \`develop\`/\`dev\` AND \`main\`/\`master\` exist → likely GitFlow
+   - Feature branches → \`develop\`/\`dev\`
+   - Non-critical bugfixes branches → \`develop\`/\`dev\`
+   - Hotfix branches → \`main\`/\`master\`
+
+3. **Trunk-based detection:**
+   - If only \`main\`/\`master\` exists (no \`develop\`/\`dev\`) → target default branch
+
+4. **Historical patterns:**
+   - Consider which branches have received similar MRs recently
+   - Prefer branches that match the team's established workflow
+
+5. **Fallback hierarchy:**
+   - \`develop\` > \`development\` > \`dev\` > \`main\` > \`master\` > default branch
+
+## Output Format
+Return ONLY a valid JSON object with no additional text:
+{"targetBranch": "<selected_branch>", "confidence": "high|medium|low", "reasoning": "<brief explanation>"}`;
+
+    const userMessage = `Select the target branch for this merge request:
+
+## Context
+- **Source branch:** ${currentBranch}
+- **Available branches:** ${availableBranches.join(', ')}
+- **Project default branch:** ${defaultBranch}
+${options?.recentMRTargets?.length ? `- **Recent MR target branches:** ${options.recentMRTargets.join(', ')}` : ''}
+${options?.commitMessages?.length ? `- **Commit messages:** ${options.commitMessages.slice(0, 5).join('; ')}` : ''}
+${options?.ticketNumber ? `- **Ticket/Issue:** ${options.ticketNumber}` : ''}`;
+
+    try {
+      const response = await this.chat(
+        [{ role: 'user', content: userMessage }],
+        { systemPrompt, maxTokens: 300, temperature: 0.1 }
+      );
+
+      // Clean up response and parse JSON
+      let content = response.content.trim();
+      
+      // Remove thinking tags (Qwen, etc.)
+      content = content.replace(/<think>[\s\S]*?<\/think>/gi, '');
+      content = content.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/gi, '');
+      
+      // Extract JSON from potential markdown code blocks
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        content = jsonMatch[0];
+      }
+
+      const result = JSON.parse(content);
+      
+      // Validate the selected branch exists
+      if (!availableBranches.includes(result.targetBranch)) {
+        // Fallback to a valid branch
+        return this.fallbackTargetBranch(availableBranches, defaultBranch);
+      }
+
+      return {
+        targetBranch: result.targetBranch,
+        confidence: result.confidence || 'medium',
+        reasoning: result.reasoning || 'Selected based on branch naming conventions'
+      };
+    } catch (error) {
+      // On any error, use fallback logic
+      return this.fallbackTargetBranch(availableBranches, defaultBranch);
+    }
+  }
+
+  /**
+   * Fallback target branch selection when AI fails
+   */
+  private fallbackTargetBranch(
+    availableBranches: string[],
+    defaultBranch: string
+  ): { targetBranch: string; confidence: 'high' | 'medium' | 'low'; reasoning: string } {
+    const priorityOrder = ['develop', 'development', 'dev', 'main', 'master'];
+    
+    for (const branch of priorityOrder) {
+      if (availableBranches.includes(branch)) {
+        return {
+          targetBranch: branch,
+          confidence: 'medium',
+          reasoning: `Fallback selection: ${branch} (priority-based)`
+        };
+      }
+    }
+
+    return {
+      targetBranch: defaultBranch,
+      confidence: 'low',
+      reasoning: `Fallback to project default branch: ${defaultBranch}`
+    };
+  }
 }
