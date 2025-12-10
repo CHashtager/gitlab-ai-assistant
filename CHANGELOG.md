@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.3
+
+- Improved Target Branch Selection based.
+
+## 0.0.2
+
+- Remove `Bearer` hardcoded value in auth header
+
 ## 0.0.1
 
 - Initial release
@@ -8,8 +16,3 @@
 - Automated MR creation
 - Code review with multiple modes
 - Support for multiple LLM providers
-
-
-## 0.0.2
-
-- Remove `Bearer` hardcoded value in auth header

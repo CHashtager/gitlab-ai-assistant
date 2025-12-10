@@ -99,11 +99,60 @@ export async function pushAndCreateMRCommand(): Promise<void> {
         return;
       }
 
-      // Step 4: Generate MR description
-      progress.report({ message: 'Generating MR description...', increment: 20 });
+      // Step 4: Select target branch using AI
+      progress.report({ message: 'Selecting target branch...', increment: 10 });
 
-      // Get commits for this branch - prioritize dev branches over main/master
-      const targetBranch = config.defaultTargetBranch || await gitService.getMRTargetBranch();
+      // Get available branches and recent MR targets for context
+      const localBranches = await gitService.getBranches();
+      const defaultBranch = await gitService.getDefaultBranch();
+      
+      // Get recent MR targets for historical context
+      let recentMRTargets: string[] = [];
+      try {
+        const recentMRs = await gitlabService.listMergeRequests(project.id, { state: 'all' });
+        recentMRTargets = [...new Set(recentMRs.slice(0, 10).map(mr => mr.target_branch))];
+      } catch {
+        // Ignore if we can't fetch MRs
+      }
+
+      // Use configured target branch or AI selection
+      let targetBranch: string;
+      let branchSelectionReasoning: string | undefined;
+
+      if (config.defaultTargetBranch) {
+        targetBranch = config.defaultTargetBranch;
+      } else {
+        const branchSelection = await llmService.selectTargetBranch(
+          currentBranch,
+          localBranches,
+          defaultBranch,
+          { recentMRTargets }
+        );
+        targetBranch = branchSelection.targetBranch;
+        branchSelectionReasoning = branchSelection.reasoning;
+
+        // If confidence is low, ask user to confirm
+        if (branchSelection.confidence === 'low') {
+          const selectedBranch = await vscode.window.showQuickPick(
+            localBranches.map(b => ({
+              label: b,
+              description: b === targetBranch ? '(suggested)' : undefined
+            })),
+            {
+              placeHolder: `Select target branch (suggested: ${targetBranch})`,
+              title: 'Target Branch Selection'
+            }
+          );
+          if (!selectedBranch) {
+            return;
+          }
+          targetBranch = selectedBranch.label;
+        }
+      }
+
+      // Step 5: Generate MR description
+      progress.report({ message: 'Generating MR description...', increment: 10 });
+
       const commits = await gitService.getCommitsBetween(targetBranch, currentBranch);
       const diff = await gitService.getDiffWithBranch(targetBranch);
 
@@ -124,8 +173,8 @@ export async function pushAndCreateMRCommand(): Promise<void> {
         mrTemplate
       );
 
-      // Step 5: Let user confirm/edit title and description
-      progress.report({ message: 'Waiting for confirmation...', increment: 20 });
+      // Step 6: Let user confirm/edit title and description
+      progress.report({ message: 'Waiting for confirmation...', increment: 10 });
 
       const finalTitle = await vscode.window.showInputBox({
         prompt: 'MR Title',
@@ -163,7 +212,7 @@ export async function pushAndCreateMRCommand(): Promise<void> {
       // Close the description document
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-      // Step 6: Create the MR
+      // Step 7: Create the MR
       progress.report({ message: 'Creating merge request...', increment: 20 });
 
       const mr = await gitlabService.createMergeRequest(
